@@ -23,7 +23,7 @@ void *task(void *arg){
 
 	while(1){
         sem_wait(&semCanibal);
-		if( pratos == 0){
+		if( pratos <= 0){
             printf("Acabo comida! Chamando o Cozinheiro\n");
             sem_post(&mutexCozinha);
 		}
