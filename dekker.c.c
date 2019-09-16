@@ -12,8 +12,8 @@ sem_t mutex;
 
 int interesse[THREADS];
 int vez = 0;
-int pratos = COMIDAS;
-int cozinha = 0;
+int pratos = 1;
+volatile int cozinha = 0;
 
 void *canibalCode(void *arg)
 {
@@ -21,11 +21,12 @@ void *canibalCode(void *arg)
 
     while (1)
     {
-        lock(tid);
         sem_wait(&semPratos);
-        pratos--;
+        printf("Thread %d entrou na região crítica.\n", tid);
+        lock(tid);
         //RC begin
-        printf("Thread %d\n", tid);
+        pratos--;
+        printf("Thread %d pegou comida.\n", tid);
         if (pratos == 0)
         {
             cozinha = 1;
@@ -33,9 +34,9 @@ void *canibalCode(void *arg)
             while (cozinha)
                 ;
         }
-        printf(" Thread Comendo!\n");
         //RC end
         unlock(tid);
+        printf(" Thread Comendo!\n");
     }
 }
 void *cozinheiroCode(void *arg)
@@ -53,25 +54,6 @@ void *cozinheiroCode(void *arg)
         usleep(550000);
     }
 }
-void lockCozinheiro(int id)
-{
-    interesse[id] = 1; //fala q tem interesse
-    while (cozinha)
-    { //enquanto tiver alguem com interesse
-        if (vez != id)
-        {                      // e nao for /minha vez
-            interesse[id] = 0; //digo q n tenho interesse
-            while (vez != id)
-                ;              // enquanto n for minha vez
-            interesse[id] = 1; //eu aviso q tenho interesse
-        }
-    }
-}
-void unlockCozinheiro(int id)
-{
-    cozinha = 0;
-    nextTurn();
-}
 void lock(int id)
 {
     interesse[id] = 1; //fala q tem interesse
@@ -80,8 +62,7 @@ void lock(int id)
         if (vez != id)
         {                      // e nao for /minha vez
             interesse[id] = 0; //digo q n tenho interesse
-            while (vez != id)
-                ;              // enquanto n for minha vez
+            while (vez != id);              // enquanto n for minha vez
             interesse[id] = 1; //eu aviso q tenho interesse
         }
     }
@@ -118,7 +99,7 @@ int main(void)
 
     for (i = 0; i < THREADS; i++)
         interesse[i] = 0;
-    sem_init(&semPratos, 0, pratos);
+    sem_init(&semPratos, 0, 1);
     sem_init(&mutexComida, 0, 0);
 
     for (i = 0; i < THREADS - 1; i++)
