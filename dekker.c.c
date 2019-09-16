@@ -1,44 +1,37 @@
-/*
-exemplo com mutex
-
-uma unica thread acessa a regiao critica por vez.
-*/
-
 #include <stdio.h>
 #include <pthread.h>
 #include <semaphore.h>
 
-#define THREADS 5
-#define COMIDAS 3
+#define THREADS 10
+#define COMIDAS 4
 
 sem_t semPratos;
 sem_t semCozinheiro;
 sem_t mutexComida;
 sem_t mutex;
 
-int flag;
 int interesse[THREADS];
 int vez = 0;
-int auxvez;
 int pratos = COMIDAS;
 int cozinha = 0;
 
 void *canibalCode(void *arg)
 {
-    int item, tid, i;
-    tid = (int)(long int)arg;
+    int tid = (int)(long int)arg;
 
     while (1)
     {
-        sem_wait(&semPratos);
         lock(tid);
+        sem_wait(&semPratos);
         pratos--;
         //RC begin
         printf("Thread %d\n", tid);
-        if (pratos <= 0)
+        if (pratos == 0)
         {
-            lockCozinheiro( THREADS );
+            cozinha = 1;
             sem_post(&mutexComida);
+            while (cozinha)
+                ;
         }
         printf(" Thread Comendo!\n");
         //RC end
@@ -51,15 +44,17 @@ void *cozinheiroCode(void *arg)
     tid = (int)(long int)arg;
     while (1)
     {
-        sem_wait(&semCozinheiro);
+        sem_wait(&mutexComida);
         printf("\n Fazendo comida...\n");
         for (int i = 0; i < COMIDAS; i++)
             sem_post(&semPratos);
         pratos = COMIDAS;
-        sem_wait(&mutexComida);
+        cozinha = 0;
+        usleep(550000);
     }
 }
-void lockCozinheiro(int id){
+void lockCozinheiro(int id)
+{
     interesse[id] = 1; //fala q tem interesse
     while (cozinha)
     { //enquanto tiver alguem com interesse
@@ -74,8 +69,8 @@ void lockCozinheiro(int id){
 }
 void unlockCozinheiro(int id)
 {
+    cozinha = 0;
     nextTurn();
-    interesse[id] = 0;
 }
 void lock(int id)
 {
@@ -98,12 +93,12 @@ void unlock(int id)
 }
 void nextTurn()
 {
-    vez = (vez +  1 ) % (THREADS - 1);
+    vez = (vez + 1) % (THREADS - 1);
 }
 
 int anyoneTrue(int tid)
 {
-    for (int i = 0; i < THREADS - 1; i++)
+    for (int i = 0; i < THREADS; i++)
     {
         if (i != tid)
         { // nao qero saber se eu mesmo tenho interesse
@@ -124,7 +119,6 @@ int main(void)
     for (i = 0; i < THREADS; i++)
         interesse[i] = 0;
     sem_init(&semPratos, 0, pratos);
-    sem_init(&semCozinheiro, 0, 0);
     sem_init(&mutexComida, 0, 0);
 
     for (i = 0; i < THREADS - 1; i++)
