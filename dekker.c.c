@@ -7,7 +7,7 @@
 
 sem_t semPratos;
 sem_t semCozinheiro;
-sem_t mutexComida;
+sem_t barreiraComida;
 sem_t mutex;
 
 int interesse[THREADS];
@@ -22,7 +22,7 @@ void *canibalCode(void *arg)
     while (1)
     {
         sem_wait(&semPratos);
-        printf("Thread %d entrou na região crítica.\n", tid);
+        printf("Thread %d entrou na regiao critica.\n", tid);
         lock(tid);
         //RC begin
         pratos--;
@@ -30,7 +30,7 @@ void *canibalCode(void *arg)
         if (pratos == 0)
         {
             cozinha = 1;
-            sem_post(&mutexComida);
+            sem_post(&barreiraComida);
             while (cozinha)
                 ;
         }
@@ -45,7 +45,7 @@ void *cozinheiroCode(void *arg)
     tid = (int)(long int)arg;
     while (1)
     {
-        sem_wait(&mutexComida);
+        sem_wait(&barreiraComida);
         printf("\n Fazendo comida...\n");
         for (int i = 0; i < COMIDAS; i++)
             sem_post(&semPratos);
@@ -99,8 +99,9 @@ int main(void)
 
     for (i = 0; i < THREADS; i++)
         interesse[i] = 0;
+
     sem_init(&semPratos, 0, 1);
-    sem_init(&mutexComida, 0, 0);
+    sem_init(&barreiraComida, 0, 0);
 
     for (i = 0; i < THREADS - 1; i++)
         pthread_create(&threads[i], NULL, canibalCode, (void *)i);
